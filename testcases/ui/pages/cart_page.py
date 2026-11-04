@@ -11,6 +11,8 @@ class CartPage(BasePage):
 
     def load(self) -> "CartPage":
         self.open(self.PATH)
+        # 购物车是异步渲染的：要么有商品行，要么是空态，等出现任意一个再继续
+        self.wait_first(["cart-row", "cart-empty"])
         return self
 
     @property

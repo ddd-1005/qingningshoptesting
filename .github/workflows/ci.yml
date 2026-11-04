@@ -60,8 +60,10 @@ jobs:
           python-version: "3.12"
           cache: pip
 
-      - name: 安装 Chrome
-        uses: browser-actions/setup-chrome@v1
+      - name: 确认浏览器可用
+        run: |
+          google-chrome --version || chromium --version || chromium-browser --version
+          google-chrome-stable --version || true
 
       - name: 安装依赖
         run: pip install -r requirements.txt

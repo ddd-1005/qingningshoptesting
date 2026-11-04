@@ -94,3 +94,26 @@ class BasePage:
             EC.url_contains(fragment),
             message=f"URL 未在预期时间内包含「{fragment}」，当前 {self.current_url}",
         )
+
+    # ---------------- 列表渲染等待 ----------------
+    def wait_first(self, test_ids: list[str], timeout: float | None = None) -> str:
+        """等这组元素中任意一个出现。
+
+        页面是异步渲染的，"加载完成"有两种合法结果：有数据（商品卡片）或者空态提示。
+        只等其中一种，遇到另一种就会白等到超时。
+        """
+        def _probe(driver):
+            for tid in test_ids:
+                if driver.find_elements(*self._selector(tid)):
+                    return tid
+            return False
+
+        return WebDriverWait(self.driver, timeout or self.timeout).until(
+            _probe, message=f"元素 {test_ids} 在预期时间内均未出现")
+
+    def wait_count(self, test_id: str, expected: int, timeout: float | None = None) -> bool:
+        """等某类元素的数量变成期望值 —— 列表渲染完成才能数数量。"""
+        return WebDriverWait(self.driver, timeout or self.timeout).until(
+            lambda d: len(d.find_elements(*self._selector(test_id))) == expected,
+            message=f"元素 [data-testid={test_id}] 数量未在预期时间内变为 {expected}",
+        )

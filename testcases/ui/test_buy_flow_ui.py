@@ -82,6 +82,7 @@ def test_search_no_result_shows_empty_state(products_page):
 @pytest.mark.p1
 def test_search_hit(products_page):
     products_page.search("咖啡")
+    assert products_page.wait_product_count(1), "搜索结果数量不正确"
     products_page.wait_text("product-name", "冷萃咖啡液 10条装")
     assert products_page.product_count == 1
 

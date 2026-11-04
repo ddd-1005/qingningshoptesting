@@ -26,8 +26,7 @@ def test_login_success_redirect_to_products(login_page):
         login_page.wait_url_contains("/products")
 
     with allure.step("断言商品真的渲染出来了（而不是白屏）"):
-        login_page.find("product-list")
-        assert len(login_page.find_all("product-card")) == 6
+        assert login_page.wait_count("product-card", 6), "商品列表未渲染出 6 个商品"
 
 
 @allure.story("登录失败")

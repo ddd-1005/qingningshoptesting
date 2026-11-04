@@ -15,7 +15,7 @@ class OrdersPage(BasePage):
     def order_count(self) -> int:
         """等待订单列表渲染完成，避免"页面还没加载就数元素"。"""
         self.wait_url_contains("/orders")
-        self.find("order-list")
+        self.wait_first(["order-item", "empty-orders"])
         return len(self.find_all("order-item"))
 
     @property

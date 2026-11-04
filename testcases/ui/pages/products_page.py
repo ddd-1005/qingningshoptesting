@@ -11,7 +11,7 @@ class ProductsPage(BasePage):
 
     def load(self) -> "ProductsPage":
         self.open(self.PATH)
-        self.find("product-list")
+        self.wait_first(["product-card", "empty-products"])
         return self
 
     # ---------------- 查询 ---------------- #
@@ -45,6 +45,10 @@ class ProductsPage(BasePage):
     def wait_cart_count(self, expected: int) -> bool:
         """等购物车角标变成期望值：接口是异步的，不能点完立刻断言。"""
         return self.wait_text("cart-count", str(expected))
+
+    def wait_product_count(self, expected: int) -> bool:
+        """搜索是异步请求，必须等列表数量真的变了再断言。"""
+        return self.wait_count("product-card", expected)
 
     def go_to_cart(self) -> None:
         self.click("go-cart")

@@ -127,7 +127,13 @@ def _build_driver():
     options.add_argument("--window-size=1440,960")
     options.add_argument("--disable-gpu")
     options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")   # CI 容器里 /dev/shm 太小会导致浏览器崩溃
     options.add_argument("--lang=zh-CN")
+
+    # 浏览器装在非标准路径时（比如 CI 上手动安装的 Chrome），用环境变量指定
+    binary = os.getenv("MINIMALL_BROWSER_BINARY")
+    if binary:
+        options.binary_location = binary
 
     if browser == "chrome":
         return Chrome(options=options)
