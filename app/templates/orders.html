@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>我的订单 - 青柠商城</title>
+  <style>
+    body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+           margin: 0; background: #f5f7f4; color: #1f2d20; }
+    header { background: #fff; padding: 14px 24px; display: flex; gap: 16px; align-items: center;
+             box-shadow: 0 1px 6px rgba(0,0,0,.06); }
+    header h1 { font-size: 17px; margin: 0; flex: 1; }
+    main { padding: 24px; max-width: 720px; }
+    .order { background: #fff; border-radius: 10px; padding: 16px; margin-bottom: 10px; }
+    .order .no { font-size: 14px; font-weight: 600; }
+    .order .meta { color: #8a978b; font-size: 12px; margin-top: 6px; }
+    .order .amount { color: #d64545; font-size: 16px; margin-top: 8px; }
+    .empty { background: #fff; border-radius: 10px; padding: 40px; text-align: center;
+             color: #8a978b; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>我的订单</h1>
+    <a href="/products" data-testid="back-products">继续购物</a>
+  </header>
+  <main>
+    <div id="order-list" data-testid="order-list"></div>
+  </main>
+
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) window.location.href = "/login";
+
+    (async () => {
+      const resp = await fetch("/api/orders", { headers: { Authorization: "Bearer " + token } });
+      const body = await resp.json();
+      const list = document.getElementById("order-list");
+      if (body.code !== 0 || body.data.items.length === 0) {
+        list.innerHTML = '<div class="empty" data-testid="empty-orders">还没有订单</div>';
+        return;
+      }
+      const last = sessionStorage.getItem("last_order_no");
+      list.innerHTML = body.data.items.map((o) => `
+        <div class="order" data-testid="order-item"
+             ${o.order_no === last ? 'data-testid-latest="true"' : ""}>
+          <div class="no" data-testid="order-no">${o.order_no}</div>
+          <div class="meta">下单时间：${o.created_at} ｜ 状态：${o.status}</div>
+          <div class="amount" data-testid="order-amount">¥${o.total_amount.toFixed(2)}</div>
+        </div>`).join("");
+    })();
+  </script>
+</body>
+</html>

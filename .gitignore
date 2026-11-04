@@ -1,0 +1,28 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# ---- 产物 ----
+allure-results/
+allure-report/
+screenshots/
+*.log
+htmlcov/
+.coverage
+
+# ---- 被测系统数据 ----
+app/data/*.db
+app/data/*.db-journal
+
+# ---- 本地环境变量 ----
+.env
+
+# ---- 编辑器 ----
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,94 @@
+name: Mini Mall 自动化测试
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 1 * * *"        # 每天 09:00（UTC+8）跑一次，尽早发现环境/数据漂移
+  workflow_dispatch:
+
+jobs:
+  # ---------------- 接口自动化：并行 4 个 worker ----------------
+  api-test:
+    name: 接口自动化
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 执行接口用例（并行）
+        run: pytest testcases/api -m api -n 4
+
+      - name: 安装 Allure CLI
+        if: always()
+        run: |
+          curl -sSL -o allure.zip https://github.com/allure-framework/allure2/releases/download/2.30.0/allure-2.30.0.zip
+          unzip -q allure.zip -d ${{ runner.temp }}
+          echo "${{ runner.temp }}/allure-2.30.0/bin" >> $GITHUB_PATH
+
+      - name: 生成 Allure 报告
+        if: always()
+        run: allure generate allure-results -o allure-report --clean
+
+      - name: 上传测试报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-allure-report
+          path: allure-report/
+          retention-days: 14
+
+  # ---------------- UI 自动化：headless 单进程 ----------------
+  ui-test:
+    name: Web UI 自动化
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: 安装 Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: 安装依赖
+        run: pip install -r requirements.txt
+
+      - name: 执行 UI 用例
+        env:
+          MINIMALL_BROWSER: chrome
+          MINIMALL_HEADLESS: "true"
+        run: pytest testcases/ui -m ui
+
+      - name: 安装 Allure CLI
+        if: always()
+        run: |
+          curl -sSL -o allure.zip https://github.com/allure-framework/allure2/releases/download/2.30.0/allure-2.30.0.zip
+          unzip -q allure.zip -d ${{ runner.temp }}
+          echo "${{ runner.temp }}/allure-2.30.0/bin" >> $GITHUB_PATH
+
+      - name: 生成 Allure 报告
+        if: always()
+        run: allure generate allure-results -o allure-report --clean
+
+      - name: 上传测试报告与失败截图
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-allure-report
+          path: |
+            allure-report/
+            screenshots/
+          retention-days: 14

@@ -1,0 +1,51 @@
+# 登录接口的异常用例集（数据驱动：加一条用例只改这个文件，不动代码）
+# 说明：不写 expect_http 时默认 200，业务失败通过 code 区分
+
+- case_id: LOGIN-002
+  title: 密码错误
+  username: test01
+  password: "654321"
+  expect_code: 1003
+  expect_msg: 用户名或密码错误
+
+- case_id: LOGIN-003
+  title: 用户不存在（提示语必须与密码错误一致，防止账号枚举）
+  username: nobody01
+  password: "123456"
+  expect_code: 1003
+  expect_msg: 用户名或密码错误
+
+- case_id: LOGIN-004
+  title: 账号被锁定
+  username: locked01
+  password: "123456"
+  expect_code: 1004
+  expect_msg: 账号已被锁定
+
+- case_id: LOGIN-005
+  title: 密码大小写敏感
+  username: test01
+  password: "123456A"
+  expect_code: 1003
+  expect_msg: 用户名或密码错误
+
+- case_id: LOGIN-006
+  title: 用户名前后带空格（不做 trim，属于明确的产品规则）
+  username: " test01"
+  password: "123456"
+  expect_code: 1003
+  expect_msg: 用户名或密码错误
+
+- case_id: LOGIN-007
+  title: SQL 注入字符串应被当作普通参数，不能绕过登录
+  username: "test01' OR '1'='1"
+  password: "123456"
+  expect_code: 1003
+  expect_msg: 用户名或密码错误
+
+- case_id: LOGIN-008
+  title: 用户名含中文
+  username: "测试用户01"
+  password: "123456"
+  expect_code: 1003
+  expect_msg: 用户名或密码错误

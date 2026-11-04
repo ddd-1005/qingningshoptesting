@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>商品列表 - 青柠商城</title>
+  <style>
+    body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+           margin: 0; background: #f5f7f4; color: #1f2d20; }
+    header { background: #fff; padding: 14px 24px; display: flex; align-items: center;
+             gap: 16px; box-shadow: 0 1px 6px rgba(0,0,0,.06); }
+    header h1 { font-size: 17px; margin: 0; flex: 1; }
+    .cart { font-size: 14px; color: #4a5a4c; }
+    .cart b { color: #d97706; }
+    main { padding: 24px; }
+    .toolbar { display: flex; gap: 10px; margin-bottom: 18px; }
+    .toolbar input { padding: 9px 12px; border: 1px solid #d7ddd6; border-radius: 8px;
+                     width: 220px; font-size: 14px; }
+    .toolbar button { padding: 9px 18px; border: 0; border-radius: 8px; background: #6fbf73;
+                      color: #fff; cursor: pointer; font-size: 14px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; }
+    .card { background: #fff; border-radius: 10px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+    .card h3 { font-size: 15px; margin: 0 0 8px; font-weight: 600; }
+    .price { color: #d64545; font-size: 18px; font-weight: 600; }
+    .stock { color: #8a978b; font-size: 12px; margin: 6px 0 12px; }
+    .card button { width: 100%; padding: 9px; border: 0; border-radius: 8px; background: #eef6ee;
+                   color: #3f7a44; cursor: pointer; font-size: 14px; }
+    .card button:disabled { background: #f0f0f0; color: #b0b0b0; cursor: not-allowed; }
+    .toast { position: fixed; right: 24px; bottom: 24px; background: #1f2d20; color: #fff;
+             padding: 10px 16px; border-radius: 8px; font-size: 13px; opacity: 0;
+             transition: opacity .2s; }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>青柠商城</h1>
+    <span class="cart">购物车 <b data-testid="cart-count" id="cart-count">0</b> 件</span>
+    <a href="/cart" data-testid="go-cart">去结算</a>
+  </header>
+  <main>
+    <div class="toolbar">
+      <input id="keyword" data-testid="search-input" placeholder="搜索商品名称" />
+      <button data-testid="search-btn" id="search-btn">搜索</button>
+    </div>
+    <div class="grid" id="product-list" data-testid="product-list"></div>
+  </main>
+  <div class="toast" id="toast" data-testid="toast"></div>
+
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) window.location.href = "/login";
+
+    const toast = (msg) => {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.classList.add("show");
+      setTimeout(() => el.classList.remove("show"), 1500);
+    };
+
+    async function refreshCartCount() {
+      const resp = await fetch("/api/cart", { headers: { Authorization: "Bearer " + token } });
+      const body = await resp.json();
+      const count = body.code === 0
+        ? body.data.items.reduce((s, i) => s + i.quantity, 0) : 0;
+      document.getElementById("cart-count").textContent = count;
+    }
+
+    async function loadProducts(keyword = "") {
+      const url = "/api/products?size=50" + (keyword ? "&keyword=" + encodeURIComponent(keyword) : "");
+      const resp = await fetch(url);
+      const body = await resp.json();
+      const list = document.getElementById("product-list");
+      list.innerHTML = "";
+      if (body.code !== 0 || body.data.items.length === 0) {
+        list.innerHTML = '<div data-testid="empty-products">没有找到商品</div>';
+        return;
+      }
+      body.data.items.forEach((p) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.setAttribute("data-testid", "product-card");
+        card.innerHTML = `
+          <h3 data-testid="product-name">${p.name}</h3>
+          <div class="price" data-testid="product-price">¥${p.price.toFixed(2)}</div>
+          <div class="stock" data-testid="product-stock">库存 ${p.stock}</div>
+          <button data-testid="add-cart-${p.id}" ${p.stock === 0 ? "disabled" : ""}>
+            ${p.stock === 0 ? "已售罄" : "加入购物车"}
+          </button>`;
+        card.querySelector("button").addEventListener("click", async () => {
+          const r = await fetch("/api/cart/items", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+            body: JSON.stringify({ product_id: p.id, quantity: 1 }),
+          });
+          const b = await r.json();
+          toast(b.code === 0 ? "已加入购物车" : b.msg);
+          if (b.code === 0) refreshCartCount();
+        });
+        list.appendChild(card);
+      });
+    }
+
+    document.getElementById("search-btn").addEventListener("click", () => {
+      loadProducts(document.getElementById("keyword").value.trim());
+    });
+
+    loadProducts();
+    refreshCartCount();
+  </script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>购物车 - 青柠商城</title>
+  <style>
+    body { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+           margin: 0; background: #f5f7f4; color: #1f2d20; }
+    header { background: #fff; padding: 14px 24px; display: flex; gap: 16px; align-items: center;
+             box-shadow: 0 1px 6px rgba(0,0,0,.06); }
+    header h1 { font-size: 17px; margin: 0; flex: 1; }
+    main { padding: 24px; max-width: 720px; }
+    .row { background: #fff; border-radius: 10px; padding: 14px 16px; margin-bottom: 10px;
+           display: flex; align-items: center; gap: 12px; }
+    .row .name { flex: 1; font-size: 14px; }
+    .row .qty { color: #6b7a6d; font-size: 13px; }
+    .row .sub { color: #d64545; font-weight: 600; }
+    .del { border: 0; background: none; color: #b9c2ba; cursor: pointer; font-size: 13px; }
+    .footer { margin-top: 20px; display: flex; align-items: center; gap: 16px; }
+    .total { font-size: 15px; }
+    .total b { color: #d64545; font-size: 20px; }
+    .checkout { padding: 11px 26px; border: 0; border-radius: 8px; background: #6fbf73;
+                color: #fff; font-size: 15px; cursor: pointer; }
+    .empty { background: #fff; border-radius: 10px; padding: 40px; text-align: center;
+             color: #8a978b; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>购物车</h1>
+    <a href="/products" data-testid="back-products">继续挑选</a>
+    <a href="/orders" data-testid="go-orders">我的订单</a>
+  </header>
+  <main>
+    <div id="cart-list"></div>
+    <div class="footer" id="cart-footer" style="display:none">
+      <div class="total">合计：<b data-testid="cart-total" id="cart-total">¥0.00</b></div>
+      <button class="checkout" data-testid="checkout-btn" id="checkout-btn">提交订单</button>
+    </div>
+  </main>
+
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) window.location.href = "/login";
+
+    async function loadCart() {
+      const resp = await fetch("/api/cart", { headers: { Authorization: "Bearer " + token } });
+      const body = await resp.json();
+      const list = document.getElementById("cart-list");
+      if (body.code !== 0 || body.data.items.length === 0) {
+        list.innerHTML = '<div class="empty" data-testid="cart-empty">购物车还是空的</div>';
+        document.getElementById("cart-footer").style.display = "none";
+        return;
+      }
+      list.innerHTML = body.data.items.map((i) => `
+        <div class="row" data-testid="cart-row">
+          <span class="name" data-testid="cart-item-name">${i.name}</span>
+          <span class="qty">x${i.quantity}</span>
+          <span class="sub">¥${(i.price * i.quantity).toFixed(2)}</span>
+          <button class="del" data-testid="del-${i.product_id}">删除</button>
+        </div>`).join("");
+      document.getElementById("cart-total").textContent = "¥" + body.data.total_amount.toFixed(2);
+      document.getElementById("cart-footer").style.display = "flex";
+      body.data.items.forEach((i) => {
+        document.querySelector(`[data-testid="del-${i.product_id}"]`).addEventListener("click", async () => {
+          await fetch(`/api/cart/items/${i.product_id}`, {
+            method: "DELETE", headers: { Authorization: "Bearer " + token },
+          });
+          loadCart();
+        });
+      });
+    }
+
+    document.getElementById("checkout-btn").addEventListener("click", async () => {
+      const requestId = "REQ" + Date.now();   // 幂等键：真实项目由前端生成防重复提交
+      const resp = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ request_id: requestId }),
+      });
+      const body = await resp.json();
+      if (body.code === 0) {
+        sessionStorage.setItem("last_order_no", body.data.order_no);
+        window.location.href = "/orders";
+      } else {
+        alert(body.msg);
+      }
+    });
+
+    loadCart();
+  </script>
+</body>
+</html>
