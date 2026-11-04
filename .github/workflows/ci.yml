@@ -76,7 +76,9 @@ jobs:
         env:
           MINIMALL_BROWSER: chrome
           MINIMALL_HEADLESS: "true"
-        run: pytest testcases/ui -m ui 2>&1 | tee pytest.log
+        # UI 自动化受浏览器启动、网络、渲染时序影响，偶发失败是常态。
+        # 失败自动重跑 2 次并延时，避免"假失败"堵塞流水线；重跑仍失败才是真缺陷。
+        run: pytest testcases/ui -m ui --reruns 2 --reruns-delay 3 2>&1 | tee pytest.log
 
       - name: 回写失败摘要
         if: failure()

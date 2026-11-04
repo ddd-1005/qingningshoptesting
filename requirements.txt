@@ -5,5 +5,6 @@ requests>=2.32
 selenium>=4.23
 pytest>=8.2
 pytest-xdist>=3.6
+pytest-rerunfailures>=14.0
 allure-pytest>=2.13
 PyYAML>=6.0
