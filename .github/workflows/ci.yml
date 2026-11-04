@@ -8,6 +8,10 @@ on:
     - cron: "0 1 * * *"        # 每天 09:00（UTC+8）跑一次，尽早发现环境/数据漂移
   workflow_dispatch:
 
+permissions:
+  contents: read
+  statuses: write
+
 jobs:
   # ---------------- 接口自动化：并行 4 个 worker ----------------
   api-test:
@@ -72,7 +76,19 @@ jobs:
         env:
           MINIMALL_BROWSER: chrome
           MINIMALL_HEADLESS: "true"
-        run: pytest testcases/ui -m ui
+        run: pytest testcases/ui -m ui 2>&1 | tee pytest.log
+
+      - name: 回写失败摘要
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          desc=$(grep -E "^E   |^FAILED|^ERROR|Exception" pytest.log | tail -2 | tr '\n' ' ' | cut -c1-130)
+          jq -n --arg d "${desc:-no-detail}" '{state:"failure",context:"ui-test",description:$d}' > body.json
+          curl -s -X POST -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -d @body.json \
+            "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}"
 
       - name: 安装 Allure CLI
         if: always()
